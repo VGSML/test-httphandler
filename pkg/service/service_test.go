@@ -114,9 +114,9 @@ func TestService_ServeHTTP(t *testing.T) {
 			body: "https://google.com\nhttps://wikipedia.com\nhttps://developer.mozilla.org\nhttps://youtube.com",
 		},
 		{
-			name: "With jobs, with cache",
+			name: "With jobs, with cache 10",
 			opts: []ServiceOpt{
-				WithLimitedJobs(2, 100),
+				WithLimitedJobs(4, 10),
 				WithRequestLimit(10),
 				WithURLRequestTimeout(20 * time.Second),
 				WithCacheLifetime(time.Second),
