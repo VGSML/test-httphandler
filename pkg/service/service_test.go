@@ -159,6 +159,7 @@ func TestService_ServeHTTP(t *testing.T) {
 			wg.Add(int(s.requestsLimit) + 1)
 			var codes int32
 			s.cacheLifetime = 0 // для проверки параллельных запросов выключаем кеш
+			// формируем количество одновременных запросов на 1 больше чем лимит и ожидаем ошибку.
 			for i := 0; i < int(s.requestsLimit)+1; i++ {
 				go func() {
 					r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer([]byte(tt.body)))
