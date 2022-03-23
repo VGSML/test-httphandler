@@ -1,3 +1,3 @@
 module github.com/VGSML/test-httphandler
 
-go 1.18
+go 1.17
