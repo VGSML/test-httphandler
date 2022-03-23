@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -12,6 +13,7 @@ import (
 )
 
 func Test_getURLResponseSize(t *testing.T) {
+	s := New()
 	tests := []struct {
 		name    string
 		url     string
@@ -38,7 +40,7 @@ func Test_getURLResponseSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getURLResponseSize(context.Background(), tt.url, tt.timeout)
+			got, err := s.urlResponseSize(context.Background(), tt.url, tt.timeout)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getURLResponseSize() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -150,6 +152,8 @@ func TestService_ServeHTTP(t *testing.T) {
 			if res.Result().StatusCode != http.StatusOK {
 				t.Error("ошибка запроса", res.Result().Status)
 			}
+			b, _ := ioutil.ReadAll(res.Result().Body)
+			t.Log(string(b))
 			// Проверка на количество запросов
 			wg := new(sync.WaitGroup)
 			wg.Add(int(s.requestsLimit) + 1)

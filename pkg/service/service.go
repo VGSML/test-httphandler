@@ -34,7 +34,8 @@ var (
 // обрабатывает запрос POST, в теле которого строки с url для определения размера ответа запроса http.Get
 // возвращает ответ в виде текста, в строках которого размер в байтах ответов для каждого URL.
 type Service struct {
-	requests int32
+	requests   int32
+	httpClient *http.Client
 
 	requestsLimit       uint
 	maxJobs             int
@@ -90,6 +91,13 @@ func WithCacheCleaningPeriod(limit time.Duration) ServiceOpt {
 	}
 }
 
+// WithHTTPClient устанавливает http.Client определения размера ответов по URL.
+func WithHTTPClient(client *http.Client) ServiceOpt {
+	return func(s *Service) {
+		s.httpClient = client
+	}
+}
+
 // cacheItem кешированное значение размера ответа и времени запроса.
 type cacheItem struct {
 	time time.Time
@@ -119,6 +127,7 @@ func New(opts ...ServiceOpt) *Service {
 		cache:               make(map[string]cacheItem),
 		jobsBuffersSize:     defJobBuffers,
 		cacheCleaningPeriod: defCacheCleaningPeriod,
+		httpClient:          http.DefaultClient,
 	}
 
 	for _, opt := range opts {
@@ -240,6 +249,7 @@ func (s *Service) processBody(ctx context.Context, body []byte) ([]uint, error) 
 		urlsForRequest = urls
 	}
 
+	// получение запроса по сети
 	if len(urlsForRequest) == 0 {
 		return out, nil
 	}
@@ -341,7 +351,7 @@ func (s *Service) addJob(job jobItem) {
 
 // processJob выполнение задания.
 func (s *Service) processJob(job jobItem) {
-	size, err := getURLResponseSize(job.ctx, job.url, s.urlRequestTimeout)
+	size, err := s.urlResponseSize(job.ctx, job.url, s.urlRequestTimeout)
 	select {
 	case <-job.ctx.Done():
 		return
@@ -377,8 +387,8 @@ func (s *Service) cacheCleaning(ctx context.Context) {
 	}
 }
 
-// getURLResponseSize возвращает размер ответа.
-func getURLResponseSize(ctx context.Context, url string, timeout time.Duration) (int, error) {
+// urlResponseSize возвращает размер ответа.
+func (s *Service) urlResponseSize(ctx context.Context, url string, timeout time.Duration) (int, error) {
 	if timeout != unlimited {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
@@ -388,7 +398,7 @@ func getURLResponseSize(ctx context.Context, url string, timeout time.Duration) 
 	if err != nil {
 		return 0, err
 	}
-	res, err := http.DefaultClient.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		return 0, err
 	}
